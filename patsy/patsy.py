@@ -19,8 +19,8 @@ class EventHandler(pyinotify.ProcessEvent):
         """Initialize event handler.
 
         Keyword argument(s):
-        scrobbler: Last.fm scrobbler instance
-        tracked_file: File object
+        scrobbler -- Last.fm scrobbler instance
+        tracked_file -- File object
         """
         tracked_file.read()  # Move to the end of the file
         self.tracked_file = tracked_file
@@ -48,10 +48,10 @@ class Patsy(object):
         """Returns Last.fm scrobbler.
 
         Keyword argument(s):
-        :param api_key: Last.fm API key
-        :param shared_secret: Last.fm API shared secret
-        :param username: Last.fm username
-        :param password: Last.fm password
+        api_key -- Last.fm API key
+        shared_secret -- Last.fm API shared secret
+        username -- Last.fm username
+        password -- Last.fm password
         """
         scrobbler = Scrobbler(api_key=api_key, shared_secret=shared_secret)
         result = scrobbler.authenticate(username, password)
@@ -62,6 +62,8 @@ class Patsy(object):
 
     @staticmethod
     def parse_arguments():
+        """Parse and return command-line arguments"""
+
         parser = argparse.ArgumentParser(
             description="Monitor a logfile for music playback and "
                         "Last.fm-scrobble plays.")
