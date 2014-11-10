@@ -2,7 +2,7 @@ __author__ = 'Lars Djerf <lars.djerf@gmail.com>'
 
 import argparse
 import errno
-import os
+import json
 import pyinotify
 import re
 import sys
@@ -54,49 +54,61 @@ class Patsy(object):
         :param password: Last.fm password
         """
         scrobbler = Scrobbler(api_key=api_key, shared_secret=shared_secret)
-        scrobbler.authenticate(username, password)
+        result = scrobbler.authenticate(username, password)
+        if not result:
+            print "Last.fm authentication failed."
+            sys.exit(errno.EACCES)
         return scrobbler
 
-    def run(self):
-        """Run Patsy"""
-
+    @staticmethod
+    def parse_arguments():
         parser = argparse.ArgumentParser(
             description="Monitor a logfile for music playback and "
                         "Last.fm-scrobble plays.")
-        parser.add_argument("-u", "--username", metavar="USERNAME",
-                            required=True, help="Last.fm username")
-        parser.add_argument("-p", "--password", metavar="PASSWORD",
-                            required=True, help="Last.fm password")
-        parser.add_argument("-a", "--api-key", metavar="API_KEY",
-                            required=True, help="Last.fm API key")
-        parser.add_argument("-s", "--shared-secret", metavar="SHARED_SECRET",
-                            required=True, help="Last.fm API shared secret")
+
         parser.add_argument("-l", "--logfile", metavar="FILE", required=True,
                             help="logfile to track")
         parser.add_argument("-d", "--daemon", dest="daemon", default=False,
                             action="store_true",
                             help="run as daemon")
-        args = parser.parse_args()
+        parser.add_argument("-c", "--config", metavar="CONFIG",
+                            required=True, help="Path to configuration file")
+        return parser.parse_args()
 
-        if not os.path.exists(args.logfile):
-            print "No such file: {0}".format(args.logfile)
-            sys.exit(errno.ENOENT)
+    def run(self):
+        """Run Patsy"""
 
-        scrobbler = self.setup_scrobbler(args.api_key, args.shared_secret,
-                                         args.username, args.password)
-        watch_manager = pyinotify.WatchManager()
-        with open(args.logfile, "r") as tracked_file:
-            event_handler = EventHandler(scrobbler=scrobbler,
-                                         tracked_file=tracked_file)
-            notifier = pyinotify.Notifier(watch_manager, event_handler)
-            watch_manager.add_watch(args.logfile, pyinotify.IN_MODIFY)
-            notifier.loop(daemonize=args.daemon, pid_file='/tmp/pyinotify.pid')
+        args = self.parse_arguments()
+        config = None
+
+        try:
+            with open(args.config, "r") as f:
+                config = json.loads(f.read())
+
+            api_key = config.get("last_fm_api_key")
+            shared_secret = config.get("last_fm_shared_secret")
+            username = config.get("last_fm_username")
+            password = config.get("last_fm_password")
+            scrobbler = self.setup_scrobbler(api_key, shared_secret, username,
+                                             password)
+            watch_manager = pyinotify.WatchManager()
+            with open(args.logfile, "r") as f:
+                event_handler = EventHandler(scrobbler=scrobbler,
+                                             tracked_file=f)
+                notifier = pyinotify.Notifier(watch_manager, event_handler)
+                watch_manager.add_watch(args.logfile, pyinotify.IN_MODIFY)
+                notifier.loop(daemonize=args.daemon,
+                              pid_file='/tmp/pyinotify.pid')
+        except IOError as e:
+            print "Failed to open '{0}': {1}".format(e.filename, e.strerror)
+            sys.exit(e.errno)
         sys.exit(0)
 
 
 def main_func():
     patsy = Patsy()
     patsy.run()
+
 
 if __name__ == "__main__":
     p = Patsy()

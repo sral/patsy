@@ -49,8 +49,9 @@ class Scrobbler(object):
         response = requests.post(self.API_URL, data=payload)
         if response.status_code == 200:
             response = json.loads(response.text)
-            self.session_key = response["session"]["key"]
-            return True
+            if not response.get("error"):
+                self.session_key = response["session"]["key"]
+                return True
         return False
 
     def now_playing(self, artist, track):
