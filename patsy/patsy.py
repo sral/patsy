@@ -3,6 +3,7 @@ __author__ = 'Lars Djerf <lars.djerf@gmail.com>'
 import argparse
 import errno
 import json
+import os
 import pyinotify
 import re
 import sys
@@ -81,7 +82,6 @@ class Patsy(object):
         """Run Patsy"""
 
         args = self.parse_arguments()
-        config = None
 
         try:
             with open(args.config, "r") as f:
@@ -99,8 +99,8 @@ class Patsy(object):
                                              tracked_file=f)
                 notifier = pyinotify.Notifier(watch_manager, event_handler)
                 watch_manager.add_watch(args.logfile, pyinotify.IN_MODIFY)
-                notifier.loop(daemonize=args.daemon,
-                              pid_file='/tmp/pyinotify.pid')
+                pid_file = "/tmp/patsy.pid" if os.geteuid() else None
+                notifier.loop(daemonize=args.daemon, pid_file=pid_file)
         except IOError as e:
             print "Failed to open '{0}': {1}".format(e.filename, e.strerror)
             sys.exit(e.errno)

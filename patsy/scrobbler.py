@@ -30,9 +30,20 @@ class Scrobbler(object):
 
         return hashlib.md5(message).hexdigest()
 
-    # noinspection PyDictCreation
-    def authenticate(self, username, password):
+    def _post(self, payload, format="json"):
+        """Sign payload and make API request.
+
+        Keyword argument(s):
+        payload -- Payload dictionary
+        format: -- Response format
         """
+        payload["api_sig"] = self._get_signature(payload)
+        payload["format"] = format
+
+        return requests.post(self.API_URL, data=payload)
+
+    def authenticate(self, username, password):
+        """Authenticate user.
 
         Keyword argument(s):
         username -- Last.fm username
@@ -42,11 +53,9 @@ class Scrobbler(object):
                    "password": password,
                    "username": username,
                    "api_key": self.api_key}
-        payload["api_sig"] = self._get_signature(payload)
-        payload["format"] = "json"
         self.session_key = ""
 
-        response = requests.post(self.API_URL, data=payload)
+        response = self._post(payload)
         if response.status_code == 200:
             response = json.loads(response.text)
             if not response.get("error"):
@@ -61,14 +70,16 @@ class Scrobbler(object):
         artist -- Artist name
         track -- Song name
         """
+        if not self.session_key:
+            return False
+
         payload = {"method": "track.updateNowPlaying",
                    "artist": artist,
                    "track": track,
                    "api_key": self.api_key,
                    "sk": self.session_key}
-        payload["api_sig"] = self._get_signature(payload)
 
-        response = requests.post(self.API_URL, data=payload)
+        response = self._post(payload)
         return response.status_code == 200
 
     def scrobble(self, artist, track):
@@ -78,13 +89,15 @@ class Scrobbler(object):
         artist -- Artist name
         track -- Song name
         """
+        if not self.session_key:
+            return False
+
         payload = {"method": "track.scrobble",
                    "artist": artist,
                    "track": track,
                    "timestamp": str(int(time.time())),
                    "api_key": self.api_key,
                    "sk": self.session_key}
-        payload["api_sig"] = self._get_signature(payload)
 
-        response = requests.post(self.API_URL, data=payload)
+        response = self._post(payload)
         return response.status_code == 200
