@@ -1,6 +1,8 @@
 {
-    "last_fm_api_key": "",
-    "last_fm_shared_secret": "",
-    "last_fm_username": "",
-    "last_fm_password": ""
+  "last_fm_api_key": "",
+  "last_fm_shared_secret": "",
+  "last_fm_username": "",
+  "last_fm_password": "",
+  "max_retries": 3,
+  "max_retry_delay": 3
 }

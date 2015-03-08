@@ -2,8 +2,18 @@ __author__ = 'Lars Djerf <lars.djerf@gmail.com>'
 
 import hashlib
 import json
+import logging
 import requests
+import requests.exceptions
+import random
 import time
+
+log = logging.getLogger(__name__)
+
+
+class ScrobblerException(Exception):
+    def __init__(self, message):
+        super(ScrobblerException, self).__init__(message)
 
 
 class Scrobbler(object):
@@ -11,10 +21,13 @@ class Scrobbler(object):
 
     API_URL = "https://ws.audioscrobbler.com/2.0/"
 
-    def __init__(self, api_key, shared_secret):
+    def __init__(self, api_key, shared_secret, max_retries=3,
+                 max_retry_delay=3):
         self.api_key = api_key
         self.shared_secret = shared_secret
         self.session_key = ""
+        self.max_retries = max_retries
+        self.max_retry_delay = max_retry_delay
 
     def _get_signature(self, payload):
         """Returns signature/hash for payload
@@ -22,7 +35,6 @@ class Scrobbler(object):
         Keyword argument(s):
         payload -- Payload dictionary
         """
-
         message = ""
         for k in sorted(payload):
             message += k + payload[k]
@@ -35,12 +47,18 @@ class Scrobbler(object):
 
         Keyword argument(s):
         payload -- Payload dictionary
-        format: -- Response format
+        format -- Response format
         """
         payload["api_sig"] = self._get_signature(payload)
         payload["format"] = format
 
-        return requests.post(self.API_URL, data=payload)
+        for _ in range(self.max_retries):
+            try:
+                return requests.post(self.API_URL, data=payload)
+            except requests.exceptions.ConnectionError:
+                time.sleep(random.random() * self.max_retry_delay)
+                log.error("Last.fm connection failed")
+        raise ScrobblerException("Last.fm connection failed")
 
     def authenticate(self, username, password):
         """Authenticate user.

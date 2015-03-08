@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='patsy',
-    version='0.1',
+    version='0.2',
     url='https://github.com/sral/patsy',
     license='GPLv2',
     author='Lars Djerf',
