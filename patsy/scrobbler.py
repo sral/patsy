@@ -37,10 +37,10 @@ class Scrobbler(object):
         """
         message = ""
         for k in sorted(payload):
-            message += k + payload[k]
+            message += k + payload[k].decode("utf-8")
         message += self.shared_secret
 
-        return hashlib.md5(message).hexdigest()
+        return hashlib.md5(message.encode("utf-8")).hexdigest()
 
     def _post(self, payload, format="json"):
         """Sign payload and make API request.
